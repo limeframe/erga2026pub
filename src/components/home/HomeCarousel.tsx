@@ -37,11 +37,23 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
   const [current, setCurrent] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   const visibleCount = useVisibleCount();
 
   const total = data.length;
   const gap = visibleCount === 1 ? 0 : visibleCount === 2 ? 24 : 32;
   const maxIndex = Math.max(0, total - visibleCount);
+
+  // Μέτρηση πλάτους container για pixel-accurate translateX
+  useEffect(() => {
+    const update = () => {
+      if (containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   useEffect(() => {
     setCurrent((c) => Math.min(c, Math.max(0, total - visibleCount)));
@@ -77,7 +89,9 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
 
   const dotCount = maxIndex + 1;
   const cardWidth = `calc((100% - ${(visibleCount - 1) * gap}px) / ${visibleCount})`;
-  const translateX = `calc(-${current} * (100% / ${visibleCount}) - ${current} * ${gap}px / ${visibleCount})`;
+  // Pixel-accurate offset: κάθε βήμα = (containerWidth + gap) / visibleCount
+  const stepPx = containerWidth > 0 ? (containerWidth + gap) / visibleCount : 0;
+  const translateX = `translateX(-${current * stepPx}px)`;
 
   return (
     <section className="bg-primary-dark py-16 sm:py-24 overflow-hidden">
@@ -107,7 +121,7 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
 
         {/* Slider track */}
         <div className="relative">
-          <div className="overflow-hidden">
+          <div className="overflow-hidden" ref={containerRef}>
             <div
               className="flex transition-transform duration-500 ease-in-out"
               style={{ gap: `${gap}px`, transform: translateX }}
