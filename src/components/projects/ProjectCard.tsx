@@ -15,8 +15,8 @@ const formatBudget = (v: string) =>
 export default function ProjectCard({ project, href }: ProjectCardProps) {
   return (
     <article className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:border-primary/20 transition-all flex flex-col">
-      {/* Image */}
-      <div className="relative h-44 bg-gray-100 shrink-0">
+      {/* Image — clickable */}
+      <Link href={href} className="relative h-44 bg-gray-100 shrink-0 block overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={project.image || project.pillar_image || `/images/j1-1.jpg`}
@@ -27,13 +27,15 @@ export default function ProjectCard({ project, href }: ProjectCardProps) {
         <div className="absolute top-3 left-3">
           <StatusBadge istatId={project.istat_id} label={project.istat_title} />
         </div>
-      </div>
+      </Link>
 
       {/* Body */}
       <div className="p-4 flex flex-col flex-1">
-        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-primary transition-colors">
-          {project.title}
-        </h3>
+        <Link href={href}>
+          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-primary transition-colors">
+            {project.title}
+          </h3>
+        </Link>
 
         <div className="mt-3 space-y-1.5 text-xs text-gray-500 flex-1">
           <p>
@@ -48,18 +50,6 @@ export default function ProjectCard({ project, href }: ProjectCardProps) {
             <p>
               <span className="font-medium text-gray-700">ΠΕ: </span>
               {project.runits.map((r) => r.title).join(", ")}
-            </p>
-          )}
-          {project.source_title && (
-            <p>
-              <span className="font-medium text-gray-700">Πηγή: </span>
-              {project.source_title}
-            </p>
-          )}
-          {project.pillar_title && (
-            <p>
-              <span className="font-medium text-gray-700">Πυλώνας: </span>
-              {project.pillar_title}
             </p>
           )}
         </div>

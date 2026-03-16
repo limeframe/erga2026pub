@@ -15,6 +15,12 @@ const fmtBudget = (n: number) => {
   return `${n.toLocaleString("el-GR")} €`;
 };
 
+const fmtBudgetNoEur = (n: number) => {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} εκατ.`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)} χιλ.`;
+  return n.toLocaleString("el-GR");
+};
+
 const fmtEur = (n: number) =>
   n.toLocaleString("el-GR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
@@ -26,29 +32,32 @@ export default function StatsCharts({ data }: Props) {
   // ── Totals ────────────────────────────────────────────────────────────────
   const totalCards = [
     { label: "Σύνολο Έργων",         value: totals.projects.toString(),    icon: "bi-collection",        color: THEME.primary },
-    { label: "Συνολικός Προϋπ.",      value: fmtBudget(totals.budget),      icon: "bi-currency-euro",     color: THEME.tertiary },
+    { label: "Συνολικός Προϋπ.",      value: fmtBudgetNoEur(totals.budget), icon: "bi-currency-euro",     color: THEME.tertiary },
     { label: "Σε Εξέλιξη",           value: totals.in_progress.toString(), icon: "bi-arrow-repeat",      color: "#22C55E" },
     { label: "Ολοκληρωμένα",         value: totals.completed.toString(),   icon: "bi-check-circle-fill", color: "#3B82F6" },
   ];
 
+  // ── by_istat lookup ───────────────────────────────────────────────────────
+  const istatById = Object.fromEntries(by_istat.map((s) => [s.istat_id, s]));
+
   // ── by_istat donut ────────────────────────────────────────────────────────
   const istatSeries  = by_istat.map((s) => s.count);
-  const istatLabels  = by_istat.map((s) => s.title);
+  const istatLabels  = by_istat.map((s) => s.title_plural || s.title);
   const istatColors  = by_istat.map((s) => s.chroma || THEME.primary);
 
   // ── by_runit stacked bar ──────────────────────────────────────────────────
   const runitCategories = by_runit.map((r) => r.runit_title);
-  const STATUS_KEYS = [
-    { key: "proposed"       as const, label: "Προτεινόμενο",  color: "#14B8A6" },
-    { key: "under_planning" as const, label: "Υπό σχεδιασμό", color: "#06B6D4" },
-    { key: "in_progress"    as const, label: "Σε εξέλιξη",    color: "#22C55E" },
-    { key: "completed"      as const, label: "Ολοκληρωμένο",  color: "#3B82F6" },
+  const ISTAT_DEFS = [
+    { key: "proposed"       as const, istat_id: 1, fallback: "Σε πρόταση",    fallbackColor: "#14B8A6" },
+    { key: "under_planning" as const, istat_id: 2, fallback: "Υπό σχεδιασμό", fallbackColor: "#06B6D4" },
+    { key: "in_progress"    as const, istat_id: 3, fallback: "Σε εξέλιξη",    fallbackColor: "#22C55E" },
+    { key: "completed"      as const, istat_id: 4, fallback: "Ολοκληρωμένα",  fallbackColor: "#3B82F6" },
   ];
-  // Override with API chroma if available
-  STATUS_KEYS.forEach((sk) => {
-    const found = by_istat.find((s) => s.title.toLowerCase().includes(sk.label.split(" ")[0].toLowerCase()));
-    if (found?.chroma) sk.color = found.chroma;
-  });
+  const STATUS_KEYS = ISTAT_DEFS.map((def) => ({
+    key:   def.key,
+    label: istatById[def.istat_id]?.title_plural || def.fallback,
+    color: istatById[def.istat_id]?.chroma       || def.fallbackColor,
+  }));
   const runitSeries = STATUS_KEYS.map((sk) => ({
     name: sk.label,
     data: by_runit.map((r) => r[sk.key]),
@@ -264,21 +273,38 @@ export default function StatsCharts({ data }: Props) {
             {by_pillar.map((p) => (
               <div
                 key={p.pillar_id}
-                className="bg-white rounded-2xl p-5 flex flex-col items-center text-center gap-3"
+                className="bg-white rounded-2xl overflow-hidden flex flex-col text-center"
                 style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}
               >
-                {p.image && (
-                  <div className="w-16 h-16 relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.image} alt={p.title} className="w-full h-full object-contain" />
-                  </div>
-                )}
-                <p className="text-sm font-semibold text-gray-900 leading-snug">{p.title}</p>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-2xl font-bold" style={{ color: THEME.primary }}>{p.count}</span>
-                  <span className="text-xs text-gray-500">έργα</span>
+                {/* Image area — fills full width, fixed height */}
+                <div className="w-full overflow-hidden" style={{ height: "130px", background: "#f0efed" }}>
+                  {p.image ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={p.image}
+                      alt={p.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <i className="bi bi-image text-4xl text-gray-300" />
+                    </div>
+                  )}
                 </div>
-                <span className="text-xs text-gray-400">{fmtBudget(p.total_budget)}</span>
+
+                {/* Content */}
+                <div className="p-4 flex flex-col items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900 leading-snug">{p.title}</p>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-2xl font-bold" style={{ color: THEME.primary }}>{p.count}</span>
+                    <span className="text-sm font-semibold" style={{ color: "var(--color-primary-dark)" }}>
+                      {p.count === 1 ? "έργο" : "έργα"}
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: "var(--color-primary-dark)" }}>
+                    {fmtBudget(p.total_budget)}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

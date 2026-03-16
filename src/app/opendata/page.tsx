@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { SITE } from "@/lib/config";
 import PageHeader from "@/components/ui/PageHeader";
-import { exportProjects } from "@/lib/api";
+import { exportProjects, getFilteredCounts } from "@/lib/api";
 import type { FullStatsResponse } from "@/lib/types";
 
 // ─── Wizard steps ─────────────────────────────────────────────────────────────
@@ -84,16 +84,27 @@ function StepBar({ step }: { step: number }) {
     <div className="flex items-center mb-8">
       {STEPS.map((s, idx) => (
         <div key={s.id} className="flex items-center flex-1 min-w-0">
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-            step === s.id ? "text-white shadow-md" : step > s.id ? "text-white/80" : "text-gray-400"
-          }`}
-            style={step >= s.id ? { background: step === s.id ? "var(--color-primary)" : "var(--color-primary)70" } : {}}
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+              step === s.id
+                ? "text-white shadow-md"
+                : step > s.id
+                ? "text-white"
+                : "text-gray-400 bg-gray-100"
+            }`}
+            style={
+              step === s.id
+                ? { background: "var(--color-primary)" }
+                : step > s.id
+                ? { background: "rgba(35,48,83,0.45)" }
+                : {}
+            }
           >
             <i className={`bi ${step > s.id ? "bi-check-circle-fill" : s.icon}`} />
             <span className="hidden md:inline">{s.label}</span>
           </div>
           {idx < STEPS.length - 1 && (
-            <div className={`flex-1 h-0.5 mx-1 rounded ${step > s.id ? "bg-primary/30" : "bg-gray-200"}`} />
+            <div className={`flex-1 h-0.5 mx-1 rounded ${step > s.id ? "bg-gray-300" : "bg-gray-200"}`} />
           )}
         </div>
       ))}
@@ -164,6 +175,14 @@ export default function OpendataPage() {
   const [error,      setError]      = useState("");
   const [done,       setDone]       = useState(false);
 
+  // Step 3 filtered counts
+  const [filteredCounts, setFilteredCounts] = useState<{
+    byTypo: Record<number, number>;
+    byPillar: Record<number, number>;
+    budgets: number[];
+  } | null>(null);
+  const [loadingStep3, setLoadingStep3] = useState(false);
+
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://egra2026.test/"}api/stats/${SITE.regionId}`)
       .then((r) => r.json())
@@ -221,6 +240,37 @@ export default function OpendataPage() {
 
   const currentTotal = step === 1 ? runitTotal : step === 2 ? istatTotal : typoTotal;
 
+  // Fetch filtered counts when entering step 3 with active filters
+  useEffect(() => {
+    if (step !== 3) return;
+    if (selRunits.length === 0 && selIstats.length === 0) {
+      setFilteredCounts(null);
+      return;
+    }
+    setLoadingStep3(true);
+    getFilteredCounts({
+      runit: selRunits.length > 0 ? selRunits : undefined,
+      istat: selIstats.length > 0 ? selIstats : undefined,
+    })
+      .then(setFilteredCounts)
+      .catch(() => setFilteredCounts(null))
+      .finally(() => setLoadingStep3(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Budget range counts from filtered projects
+  const filteredBudgetCounts = useMemo(() => {
+    if (!filteredCounts || !stats) return null;
+    const result: Record<string, number> = {};
+    for (const b of filteredCounts.budgets) {
+      const range = stats.by_budget.find(
+        (r) => b >= r.min && (r.max == null || b <= r.max)
+      );
+      if (range) result[range.range] = (result[range.range] ?? 0) + 1;
+    }
+    return result;
+  }, [filteredCounts, stats]);
+
   // ── Export ─────────────────────────────────────────────────────────────────
   const handleDownload = async () => {
     setLoading(true);
@@ -252,7 +302,7 @@ export default function OpendataPage() {
     setStep(1); setDone(false);
     setSelRunits([]); setSelIstats([]); setSelTypos([]);
     setSelPillars([]); setSelBudget(null); setFormat("xlsx");
-    setError("");
+    setError(""); setFilteredCounts(null);
   };
 
   // ── Layout ─────────────────────────────────────────────────────────────────
@@ -335,96 +385,150 @@ export default function OpendataPage() {
                 count={typoTotal ?? undefined}
               />
 
-              {/* Κατηγορία */}
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <i className="bi bi-tag" style={{ color: "var(--color-primary)" }} />
-                  Κατηγορία Έργου
-                </p>
-                {stats ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                    {stats.by_typo.map((t) => (
-                      <CheckChip
-                        key={t.typo_id}
-                        checked={selTypos.includes(t.typo_id)}
-                        onClick={() => setSelTypos((p) => toggle(p, t.typo_id))}
-                        label={t.title}
-                        badge={t.count}
-                      />
-                    ))}
+              {loadingStep3 ? (
+                <Skeleton h={4} />
+              ) : (
+                <>
+                  {/* Κατηγορία */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <i className="bi bi-tag" style={{ color: "var(--color-primary)" }} />
+                      Κατηγορία Έργου
+                    </p>
+                    {stats ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                        {stats.by_typo
+                          .map((t) => ({
+                            ...t,
+                            displayCount: filteredCounts
+                              ? (filteredCounts.byTypo[t.typo_id] ?? 0)
+                              : t.count,
+                          }))
+                          .filter((t) => !filteredCounts || t.displayCount > 0)
+                          .map((t) => (
+                            <CheckChip
+                              key={t.typo_id}
+                              checked={selTypos.includes(t.typo_id)}
+                              onClick={() => setSelTypos((p) => toggle(p, t.typo_id))}
+                              label={t.title}
+                              badge={t.displayCount}
+                            />
+                          ))}
+                      </div>
+                    ) : <Skeleton h={3} />}
                   </div>
-                ) : <Skeleton h={3} />}
-              </div>
 
-              {/* Πυλώνες */}
-              {stats?.by_pillar && stats.by_pillar.length > 0 && (
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <i className="bi bi-layers" style={{ color: "var(--color-primary)" }} />
-                    Πυλώνας Προτεραιότητας
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {stats.by_pillar.map((p) => (
-                      <button
-                        key={p.pillar_id}
-                        onClick={() => setSelPillars((prev) => toggle(prev, p.pillar_id))}
-                        className={`flex flex-col items-center text-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                          selPillars.includes(p.pillar_id)
-                            ? "border-transparent text-white shadow-lg"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                        style={selPillars.includes(p.pillar_id) ? { background: "var(--color-primary)" } : {}}
-                      >
-                        {p.image && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.image} alt={p.title}
-                            className={`w-12 h-12 object-contain transition-all ${selPillars.includes(p.pillar_id) ? "brightness-0 invert" : ""}`}
-                          />
+                  {/* Πυλώνες */}
+                  {stats?.by_pillar && stats.by_pillar.length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <i className="bi bi-layers" style={{ color: "var(--color-primary)" }} />
+                        Πυλώνας Προτεραιότητας
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {stats.by_pillar
+                          .map((p) => ({
+                            ...p,
+                            displayCount: filteredCounts
+                              ? (filteredCounts.byPillar[p.pillar_id] ?? 0)
+                              : p.count,
+                          }))
+                          .filter((p) => !filteredCounts || p.displayCount > 0)
+                          .map((p) => {
+                            const selected = selPillars.includes(p.pillar_id);
+                            return (
+                              <button
+                                key={p.pillar_id}
+                                onClick={() => setSelPillars((prev) => toggle(prev, p.pillar_id))}
+                                className={`rounded-2xl overflow-hidden flex flex-col text-center transition-all ${
+                                  selected
+                                    ? "ring-4 shadow-lg"
+                                    : "ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-sm"
+                                }`}
+                                style={selected ? { ringColor: "var(--color-primary)", outline: `3px solid var(--color-primary)` } : {}}
+                              >
+                                {/* Image area */}
+                                <div
+                                  className="w-full overflow-hidden relative"
+                                  style={{ height: "110px", background: "#f0efed" }}
+                                >
+                                  {p.image ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={p.image}
+                                      alt={p.title}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <i className="bi bi-image text-3xl text-gray-300" />
+                                    </div>
+                                  )}
+                                  {/* Selected overlay */}
+                                  {selected && (
+                                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(35,48,83,0.55)" }}>
+                                      <i className="bi bi-check-circle-fill text-white text-2xl" />
+                                    </div>
+                                  )}
+                                </div>
+                                {/* Content */}
+                                <div className={`p-3 flex flex-col items-center gap-1 ${selected ? "bg-primary" : "bg-white"}`}
+                                  style={selected ? { background: "var(--color-primary)" } : {}}>
+                                  <span className={`text-xs font-semibold leading-snug ${selected ? "text-white" : "text-gray-800"}`}>{p.title}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    selected ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+                                  }`}>{p.displayCount} έργα</span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Εύρος Προϋπολογισμού */}
+                  {stats?.by_budget && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <i className="bi bi-currency-euro" style={{ color: "var(--color-primary)" }} />
+                        Εύρος Προϋπολογισμού
+                        {selBudget && (
+                          <button onClick={() => setSelBudget(null)} className="text-xs text-gray-400 hover:text-gray-600 ml-1">
+                            <i className="bi bi-x-circle" /> Καθαρισμός
+                          </button>
                         )}
-                        <span className="text-xs font-medium leading-snug">{p.title}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          selPillars.includes(p.pillar_id) ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
-                        }`}>{p.count}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Εύρος Προϋπολογισμού */}
-              {stats?.by_budget && (
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <i className="bi bi-currency-euro" style={{ color: "var(--color-primary)" }} />
-                    Εύρος Προϋπολογισμού
-                    {selBudget && (
-                      <button onClick={() => setSelBudget(null)} className="text-xs text-gray-400 hover:text-gray-600 ml-1">
-                        <i className="bi bi-x-circle" /> Καθαρισμός
-                      </button>
-                    )}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {stats.by_budget.map((b) => {
-                      const selected = selBudget?.min === b.min && selBudget?.max === b.max;
-                      return (
-                        <button
-                          key={b.range}
-                          onClick={() => setSelBudget(selected ? null : { min: b.min, max: b.max })}
-                          className={`px-4 py-2.5 rounded-xl border text-sm transition-all ${
-                            selected
-                              ? "border-transparent text-white shadow-md"
-                              : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                          }`}
-                          style={selected ? { background: "var(--color-tertiary)" } : {}}
-                        >
-                          <span className="font-medium">{b.range}</span>
-                          <span className={`ml-2 text-xs ${selected ? "text-white/70" : "text-gray-400"}`}>({b.count})</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {stats.by_budget
+                          .map((b) => ({
+                            ...b,
+                            displayCount: filteredBudgetCounts
+                              ? (filteredBudgetCounts[b.range] ?? 0)
+                              : b.count,
+                          }))
+                          .filter((b) => !filteredBudgetCounts || b.displayCount > 0)
+                          .map((b) => {
+                            const selected = selBudget?.min === b.min && selBudget?.max === b.max;
+                            return (
+                              <button
+                                key={b.range}
+                                onClick={() => setSelBudget(selected ? null : { min: b.min, max: b.max })}
+                                className={`px-4 py-2.5 rounded-xl border text-sm transition-all ${
+                                  selected
+                                    ? "border-transparent text-white shadow-md"
+                                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                                }`}
+                                style={selected ? { background: "var(--color-tertiary)" } : {}}
+                              >
+                                <span className="font-medium">{b.range}</span>
+                                <span className={`ml-2 text-xs ${selected ? "text-white/70" : "text-gray-400"}`}>({b.displayCount})</span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               <NavButtons step={step} onBack={() => setStep(2)} onNext={() => setStep(4)} />

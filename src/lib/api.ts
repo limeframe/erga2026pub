@@ -1,5 +1,4 @@
 import axios from "axios";
-import Cookies from "js-cookie";
 import { API, SITE } from "./config";
 import type {
   HomeData,
@@ -11,7 +10,6 @@ import type {
   ProjectListResponse,
   ProjectSingleResponse,
   StatsResponse,
-  LoginResponse,
   LawPage,
 } from "./types";
 
@@ -19,27 +17,7 @@ import type {
 const client = axios.create({
   baseURL: API.baseUrl,
   headers: { "Content-Type": "application/json" },
-  withCredentials: true,
 });
-
-client.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  const xsrf = Cookies.get("XSRF-TOKEN");
-  if (xsrf) config.headers["X-XSRF-TOKEN"] = xsrf;
-  return config;
-});
-
-client.interceptors.response.use(
-  (res) => res,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      window.location.href = "/logout";
-    }
-    return Promise.reject(error);
-  }
-);
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 async function get<T>(path: string): Promise<T> {
@@ -102,17 +80,52 @@ export interface ExportFilters {
   max_budget?: number;
 }
 
+export async function getFilteredCounts(filters: {
+  runit?: number[];
+  istat?: number[];
+}): Promise<{
+  byTypo: Record<number, number>;
+  byPillar: Record<number, number>;
+  budgets: number[];
+}> {
+  const buildUrl = (page: number) => {
+    const p = new URLSearchParams({ page: String(page) });
+    filters.runit?.forEach((id) => p.append("runit[]", String(id)));
+    filters.istat?.forEach((id) => p.append("istat[]", String(id)));
+    return `api/infrastructures/${SITE.regionId}/list/0?${p.toString()}`;
+  };
+
+  const first = await client.get<ProjectListResponse>(buildUrl(1));
+  const { data: page1, last_page } = first.data.infrastructures;
+
+  let all = [...page1];
+  if (last_page > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: last_page - 1 }, (_, i) =>
+        client.get<ProjectListResponse>(buildUrl(i + 2)).then((r) => r.data.infrastructures.data)
+      )
+    );
+    all = all.concat(...rest);
+  }
+
+  const byTypo: Record<number, number> = {};
+  const byPillar: Record<number, number> = {};
+  const budgets: number[] = [];
+
+  for (const item of all) {
+    if (item.typo_id) byTypo[item.typo_id] = (byTypo[item.typo_id] ?? 0) + 1;
+    if (item.pillar_id != null) byPillar[item.pillar_id] = (byPillar[item.pillar_id] ?? 0) + 1;
+    const b = parseFloat(item.budget);
+    if (!isNaN(b)) budgets.push(b);
+  }
+
+  return { byTypo, byPillar, budgets };
+}
+
 export async function exportProjects(filters: ExportFilters): Promise<Blob> {
   const res = await client.post("api/export-infrastructures", filters, {
     responseType: "blob",
   });
-  return res.data;
-}
-
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-export async function login(email: string, password: string): Promise<LoginResponse> {
-  const res = await client.post<LoginResponse>("/login", { email, password });
-  localStorage.setItem("token", res.data.token);
   return res.data;
 }
 

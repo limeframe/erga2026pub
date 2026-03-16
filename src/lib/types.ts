@@ -2,6 +2,7 @@
 export interface IStat {
   id: number;
   title: string;
+  title_plural?: string;
   description?: string;
   chroma?: string;
 }
@@ -231,21 +232,6 @@ export interface FullStatsResponse {
   by_budget: StatsByBudget[];
   by_source: StatsBySource[];
   by_pillar: StatsByPillar[];
-}
-
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-export type UserRole = "guest" | "user" | "admin" | "client";
-
-export interface UserInfo {
-  id: number;
-  name: string;
-  email: string;
-  role: UserRole;
-}
-
-export interface LoginResponse {
-  token: string;
-  user: UserInfo;
 }
 
 // ─── Legal ────────────────────────────────────────────────────────────────────

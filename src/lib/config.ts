@@ -62,9 +62,6 @@ export const ROUTES = {
   statistikaErga: "/statistika/erga",
   statistikaMegala: "/statistika/megalaerga",
   opendata: "/opendata",
-  login: "/login",
-  logout: "/logout",
-  dashboard: "/dashboard",
 } as const;
 
 // ─── Χάρτες ΠΕ ────────────────────────────────────────────────────────────────

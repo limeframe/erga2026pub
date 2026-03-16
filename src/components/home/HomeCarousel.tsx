@@ -9,12 +9,13 @@ import { getStatusColor, getStatusLabel } from "@/lib/status";
 interface HomeCarouselProps {
   data: ProjectListItem[];
   istatColors?: Record<number, string>;
+  istatLabels?: Record<number, string>;
 }
 
 const formatBudget = (v: string) =>
   parseFloat(v).toLocaleString("el-GR", { minimumFractionDigits: 2 }) + " €";
 
-export default function HomeCarousel({ data, istatColors = {} }: HomeCarouselProps) {
+export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} }: HomeCarouselProps) {
   const resolveColor = (istatId: number | null) =>
     istatId != null ? (istatColors[istatId] ?? getStatusColor(istatId)) : getStatusColor(null);
   const [current, setCurrent] = useState(0);
@@ -117,7 +118,9 @@ export default function HomeCarousel({ data, istatColors = {} }: HomeCarouselPro
                         <div>
                           {(() => {
                             const color = resolveColor(item.istat_id);
-                            const label = item.istat_title || getStatusLabel(item.istat_id);
+                            const label = item.istat_title
+                              || (item.istat_id != null ? istatLabels[item.istat_id] : undefined)
+                              || getStatusLabel(item.istat_id);
                             return (
                               <span
                                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold"

@@ -15,25 +15,33 @@ export default function HomeClient() {
   const [data, setData] = useState<HomeData | null>(null);
   const [runitMapData, setRunitMapData] = useState<RunitMapItem[]>([]);
   const [istatColors, setIstatColors] = useState<Record<number, string>>({});
+  const [istatLabels, setIstatLabels] = useState<Record<number, string>>({});
+  const [istatPluralLabels, setIstatPluralLabels] = useState<Record<number, string>>({});
 
   useEffect(() => {
     getHomeData()
       .then(setData)
-      .catch((err) => console.error("Home data error:", err));
+      .catch(() => {});
 
     getRunitMap()
       .then((res) => setRunitMapData(res.data))
-      .catch((err) => console.error("Runit map error:", err));
+      .catch(() => {});
 
     getIStats()
       .then((res) => {
-        const map: Record<number, string> = {};
+        const colors: Record<number, string> = {};
+        const labels: Record<number, string> = {};
+        const plurals: Record<number, string> = {};
         res.data.forEach((istat: IStat) => {
-          if (istat.chroma) map[istat.id] = istat.chroma;
+          if (istat.chroma) colors[istat.id] = istat.chroma;
+          if (istat.title) labels[istat.id] = istat.title;
+          if (istat.title_plural) plurals[istat.id] = istat.title_plural;
         });
-        setIstatColors(map);
+        setIstatColors(colors);
+        setIstatLabels(labels);
+        setIstatPluralLabels(plurals);
       })
-      .catch((err) => console.error("IStats error:", err));
+      .catch(() => {});
   }, []);
 
   const stats = data?.stats ?? DefaultStats;
@@ -51,13 +59,13 @@ export default function HomeClient() {
         mapImage="/images/perifereia-peloponnisou-map.jpg"
       />
 
-      <CountersSection dataStats={stats} istatColors={istatColors} />
+      <CountersSection dataStats={stats} istatColors={istatColors} istatPluralLabels={istatPluralLabels} />
 
-      <HomeCarousel data={highlighted} istatColors={istatColors} />
+      <HomeCarousel data={highlighted} istatColors={istatColors} istatLabels={istatLabels} />
 
       <HomeDescription />
 
-      <HomeLeafletMapWrapper lat={37.5} lng={22.0} zoom={8} data={mapData} runitData={runitMapData} istatColors={istatColors} />
+      <HomeLeafletMapWrapper lat={37.5} lng={22.0} zoom={8} data={mapData} runitData={runitMapData} istatColors={istatColors} istatLabels={istatLabels} istatPluralLabels={istatPluralLabels} />
 
       <AdditionalInfo />
     </div>

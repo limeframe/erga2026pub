@@ -42,15 +42,17 @@ export default async function ErgaPage({
   const filtered = paginated?.data ?? [];
 
   return (
-    <>
+    <div style={{ background: "#ECEBEA" }}>
       <PageHeader
         title="Έργων"
         titleHighlight="Λίστα"
         description="Αναζητήστε, φιλτράρετε και εξερευνήστε όλα τα έργα της Περιφέρειας Πελοποννήσου."
         image="/images/projects.png"
+        className="bg-transparent"
       />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+      <div className="pb-14">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Filters */}
         <Suspense>
           <ProjectsFilter
@@ -100,7 +102,8 @@ export default async function ErgaPage({
             />
           </Suspense>
         )}
+        </div>
       </div>
-    </>
+    </div>
   );
 }

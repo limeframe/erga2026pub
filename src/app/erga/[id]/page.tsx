@@ -275,21 +275,8 @@ export default async function ErgaSinglePage({ params }: Props) {
               </dl>
             </div>
 
-            {/* Pillar visual card */}
-            {p.pillar && (
-              <div className="relative rounded-2xl overflow-hidden shadow-sm h-32">
-                {p.pillar.image ? (
-                  <Image src={p.pillar.image} alt={p.pillar.title} fill className="object-cover" />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-brand" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/90 via-primary/40 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 px-4 py-3">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-secondary/70 mb-0.5">Πυλώνας</p>
-                  <p className="text-xs font-bold text-white leading-snug">{p.pillar.title}</p>
-                </div>
-              </div>
-            )}
+            {/* Pillar visual card — removed */}
+
           </div>
         </div>
       </div>

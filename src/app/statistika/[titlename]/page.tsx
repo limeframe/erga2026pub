@@ -34,16 +34,17 @@ export default async function StatistikaPage({ params }: Props) {
   }
 
   return (
-    <>
+    <div style={{ background: "#ECEBEA" }}>
       <PageHeader
         title="Έργων"
         titleHighlight="Στατιστικά"
         description="Αναλυτικά γραφήματα και στοιχεία για τα έργα της Περιφέρειας Πελοποννήσου."
         image="/images/stats.png"
+        className="bg-transparent"
       />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         <StatsCharts data={data} />
       </div>
-    </>
+    </div>
   );
 }

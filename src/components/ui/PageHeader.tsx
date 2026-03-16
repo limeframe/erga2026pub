@@ -6,6 +6,7 @@ interface PageHeaderProps {
   subtitle?: string;
   description: string;
   image: string;
+  className?: string;
 }
 
 export default function PageHeader({
@@ -14,9 +15,10 @@ export default function PageHeader({
   subtitle,
   description,
   image,
+  className = "bg-white",
 }: PageHeaderProps) {
   return (
-    <section className="py-12 bg-white">
+    <section className={`py-12 ${className}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div>

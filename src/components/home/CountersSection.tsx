@@ -7,18 +7,19 @@ import { getStatusColor } from "@/lib/status";
 interface CountersSectionProps {
   dataStats: HomeStats | null | undefined;
   istatColors?: Record<number, string>;
+  istatPluralLabels?: Record<number, string>;
 }
 
 const safeCount = (n: number | undefined | null) => (n ?? 0).toString();
 
 const COUNTERS = [
-  { key: "proposed"      as const, istat: 1, label: "Προτεινόμενο", icon: "bi-bookmark-star" },
-  { key: "under_planning"as const, istat: 2, label: "Υπό σχεδιασμό", icon: "bi-bookmark" },
-  { key: "in_progress"   as const, istat: 3, label: "Σε εξέλιξη",    icon: "bi-bookmark-plus" },
-  { key: "completed"     as const, istat: 4, label: "Ολοκληρωμένο",  icon: "bi-bookmark-check" },
+  { key: "proposed"       as const, istat: 1, label: "Σε πρόταση",    icon: "bi-bookmark-star" },
+  { key: "under_planning" as const, istat: 2, label: "Υπό σχεδιασμό", icon: "bi-bookmark" },
+  { key: "in_progress"    as const, istat: 3, label: "Σε εξέλιξη",    icon: "bi-bookmark-plus" },
+  { key: "completed"      as const, istat: 4, label: "Ολοκληρωμένα",  icon: "bi-bookmark-check" },
 ];
 
-export default function CountersSection({ dataStats, istatColors = {} }: CountersSectionProps) {
+export default function CountersSection({ dataStats, istatColors = {}, istatPluralLabels = {} }: CountersSectionProps) {
   const stats = dataStats ?? { proposed: 0, under_planning: 0, in_progress: 0, completed: 0 };
   const resolveColor = (istat: number) => istatColors[istat] ?? getStatusColor(istat);
 
@@ -29,13 +30,13 @@ export default function CountersSection({ dataStats, istatColors = {} }: Counter
         const target = counter.getAttribute("data-count");
         if (target) {
           const targetNumber = +target;
-          const count = +counter.innerHTML;
+          const count = +(counter.textContent ?? "0");
           const increment = targetNumber / 100;
           if (count < targetNumber) {
-            counter.innerHTML = Math.ceil(count + increment).toString();
+            counter.textContent = Math.ceil(count + increment).toString();
             setTimeout(updateCount, 20);
           } else {
-            counter.innerHTML = targetNumber.toString();
+            counter.textContent = targetNumber.toString();
           }
         }
       };
@@ -49,6 +50,7 @@ export default function CountersSection({ dataStats, istatColors = {} }: Counter
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {COUNTERS.map(({ key, istat, label, icon }) => {
             const color = resolveColor(istat);
+            const displayLabel = istatPluralLabels[istat] ?? label;
             return (
               <div key={key}>
                 <div
@@ -62,7 +64,7 @@ export default function CountersSection({ dataStats, istatColors = {} }: Counter
                   >
                     0
                   </h2>
-                  <p className="text-gray-900 text-base">{label}</p>
+                  <p className="text-gray-900 text-base">{displayLabel}</p>
                 </div>
               </div>
             );

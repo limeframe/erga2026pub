@@ -107,9 +107,13 @@ function makeStatusIcon(count: number, color: string, delay: number) {
 }
 
 // ─── Inner map component ──────────────────────────────────────────────────────
-interface InnerProps { runitData: RunitMapItem[]; istatColors: Record<number, string> }
+interface InnerProps {
+  runitData: RunitMapItem[];
+  istatColors: Record<number, string>;
+  istatLabels: Record<number, string>;
+}
 
-function RunitCircles({ runitData, istatColors }: InnerProps) {
+function RunitCircles({ runitData, istatColors, istatLabels }: InnerProps) {
   const resolveColor = (istat: number, fallback: string) =>
     istatColors[istat] ?? fallback;
   const map = useMap();
@@ -213,13 +217,14 @@ function RunitCircles({ runitData, istatColors }: InnerProps) {
         zIndexOffset: 2000,
       }).addTo(map);
 
+      const popupLabel = istatLabels[s.istat] ?? s.label;
       // Info popup with "Εμφάνιση Έργων" button
       satMarker.bindPopup(
         `<div style="min-width:175px;font-family:system-ui,sans-serif;padding:2px 0;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
             <span style="width:10px;height:10px;border-radius:50%;
               background:${color};flex-shrink:0;display:inline-block;"></span>
-            <strong style="font-size:13px;color:#111;">${s.label}</strong>
+            <strong style="font-size:13px;color:#111;">${popupLabel}</strong>
           </div>
           <p style="color:#777;font-size:11px;margin:0 0 4px;line-height:1.3;">${runit.title}</p>
           <p style="font-size:24px;font-weight:800;color:${color};margin:0 0 12px;line-height:1;">
@@ -279,9 +284,11 @@ interface HomeLeafletMapProps {
   data: ProjectMapItem[];
   runitData: RunitMapItem[];
   istatColors?: Record<number, string>;
+  istatLabels?: Record<number, string>;
+  istatPluralLabels?: Record<number, string>;
 }
 
-export default function HomeLeafletMap({ lat, lng, zoom, runitData, istatColors = {} }: HomeLeafletMapProps) {
+export default function HomeLeafletMap({ lat, lng, zoom, runitData, istatColors = {}, istatLabels = {}, istatPluralLabels = {} }: HomeLeafletMapProps) {
   return (
     <div className="pt-28 pb-0">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
@@ -307,8 +314,8 @@ export default function HomeLeafletMap({ lat, lng, zoom, runitData, istatColors 
         <div className="flex flex-wrap justify-center gap-5 mb-5">
           {STATUSES.map((s) => (
             <div key={s.key} className="flex items-center gap-1.5 text-sm text-gray-900">
-              <span className="w-3 h-3 rounded-full" style={{ background: s.color, display: "inline-block" }} />
-              {s.label}
+              <span className="w-3 h-3 rounded-full" style={{ background: istatColors[s.istat] ?? s.color, display: "inline-block" }} />
+              {istatPluralLabels[s.istat] ?? s.label}
             </div>
           ))}
         </div>
@@ -328,7 +335,7 @@ export default function HomeLeafletMap({ lat, lng, zoom, runitData, istatColors 
             maxZoom={19}
           />
           <ScrollControl />
-          <RunitCircles runitData={runitData} istatColors={istatColors} />
+          <RunitCircles runitData={runitData} istatColors={istatColors} istatLabels={istatLabels} />
         </MapContainer>
       </div>
 
