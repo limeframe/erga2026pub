@@ -194,7 +194,10 @@ export default async function ErgaSinglePage({ params }: Props) {
                   <span className="inline-block w-5 h-0.5 rounded-full bg-primary" />
                   Περιγραφή
                 </h2>
-                <p className="text-[15px] text-gray-700 leading-relaxed">{p.description}</p>
+                <div
+                  className="text-[15px] text-gray-700 leading-relaxed prose prose-p:my-2 max-w-none"
+                  dangerouslySetInnerHTML={{ __html: p.description }}
+                />
               </div>
             )}
 
