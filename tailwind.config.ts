@@ -26,7 +26,7 @@ const config: Config = {
         ppelgrey: "#E4DCD1",
       },
       fontFamily: {
-        sans: ["Manrope", "system-ui", "sans-serif"],
+        sans: ["var(--font-manrope)", "system-ui", "sans-serif"],
       },
       backgroundImage: {
         "gradient-brand": `linear-gradient(135deg, ${primary} 0%, ${primaryLight} 100%)`,

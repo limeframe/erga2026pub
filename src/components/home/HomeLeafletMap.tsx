@@ -220,7 +220,7 @@ function RunitCircles({ runitData, istatColors, istatLabels }: InnerProps) {
       const popupLabel = istatLabels[s.istat] ?? s.label;
       // Info popup with "Εμφάνιση Έργων" button
       satMarker.bindPopup(
-        `<div style="min-width:175px;font-family:system-ui,sans-serif;padding:2px 0;">
+        `<div style="min-width:175px;font-family:Manrope,system-ui,sans-serif;padding:2px 0;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
             <span style="width:10px;height:10px;border-radius:50%;
               background:${color};flex-shrink:0;display:inline-block;"></span>

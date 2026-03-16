@@ -24,7 +24,7 @@ const fmtBudgetNoEur = (n: number) => {
 const fmtEur = (n: number) =>
   n.toLocaleString("el-GR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
-const CARD_FONT = "Manrope, system-ui, sans-serif";
+const CARD_FONT = "var(--font-manrope), Manrope, system-ui, sans-serif";
 
 export default function StatsCharts({ data }: Props) {
   const { totals, by_runit, by_istat, by_typo, by_budget, by_source, by_pillar } = data;
