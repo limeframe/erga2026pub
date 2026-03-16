@@ -445,7 +445,7 @@ export default function OpendataPage() {
                                     ? "ring-4 shadow-lg"
                                     : "ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-sm"
                                 }`}
-                                style={selected ? { ringColor: "var(--color-primary)", outline: `3px solid var(--color-primary)` } : {}}
+                                style={selected ? { outline: `3px solid var(--color-primary)` } : {}}
                               >
                                 {/* Image area */}
                                 <div
