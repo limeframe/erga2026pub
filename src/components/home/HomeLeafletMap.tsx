@@ -8,16 +8,25 @@ import type { RunitMapItem, ProjectMapItem } from "@/lib/types";
 import { ROUTES } from "@/lib/config";
 import { STATUS_LIST } from "@/lib/status";
 
-// ─── Ctrl+Scroll hint overlay ─────────────────────────────────────────────────
+// ─── Ctrl+Scroll & touch-gesture hint overlay ────────────────────────────────
 function ScrollControl() {
   const map = useMap();
   const [showHint, setShowHint] = useState(false);
+  const [hintMsg, setHintMsg] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showFor = (msg: string) => {
+    setHintMsg(msg);
+    setShowHint(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setShowHint(false), 1800);
+  };
 
   useEffect(() => {
     map.scrollWheelZoom.disable();
     const container = map.getContainer();
 
+    // Desktop: Ctrl+Scroll
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
         map.scrollWheelZoom.enable();
@@ -25,15 +34,32 @@ function ScrollControl() {
         if (timerRef.current) clearTimeout(timerRef.current);
       } else {
         map.scrollWheelZoom.disable();
-        setShowHint(true);
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => setShowHint(false), 1800);
+        showFor("Χρησιμοποιήστε Ctrl + Scroll για zoom");
       }
     };
 
+    // Mobile: 2-finger drag
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length >= 2) {
+        map.dragging.enable();
+        setShowHint(false);
+        if (timerRef.current) clearTimeout(timerRef.current);
+      } else {
+        map.dragging.disable();
+        showFor("Χρησιμοποιήστε 2 δάχτυλα για να μετακινηθείτε");
+      }
+    };
+    const onTouchEnd = () => {
+      map.dragging.disable();
+    };
+
     container.addEventListener("wheel", onWheel);
+    container.addEventListener("touchstart", onTouchStart, { passive: true });
+    container.addEventListener("touchend", onTouchEnd, { passive: true });
     return () => {
       container.removeEventListener("wheel", onWheel);
+      container.removeEventListener("touchstart", onTouchStart);
+      container.removeEventListener("touchend", onTouchEnd);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [map]);
@@ -52,8 +78,7 @@ function ScrollControl() {
         boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
         display: "flex", alignItems: "center", gap: "10px",
       }}>
-        <span style={{ fontSize: "20px" }}>⌃</span>
-        Χρησιμοποιήστε <strong>Ctrl + Scroll</strong> για zoom
+        {hintMsg}
       </div>
     </div>
   );

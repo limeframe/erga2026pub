@@ -35,7 +35,6 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
     istatId != null ? (istatColors[istatId] ?? getStatusColor(istatId)) : getStatusColor(null);
 
   const [current, setCurrent] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
   const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -45,14 +44,15 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
   const gap = visibleCount === 1 ? 0 : visibleCount === 2 ? 24 : 32;
   const maxIndex = Math.max(0, total - visibleCount);
 
-  // Μέτρηση πλάτους container για pixel-accurate translateX
+  // ResizeObserver — φωτογραφίζει αμέσως το πραγματικό πλάτος
   useEffect(() => {
-    const update = () => {
-      if (containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      setContainerWidth(entries[0].contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
@@ -60,13 +60,8 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
   }, [visibleCount, total]);
 
   const goTo = useCallback(
-    (index: number) => {
-      if (isAnimating) return;
-      setIsAnimating(true);
-      setCurrent(Math.min(Math.max(index, 0), maxIndex));
-      setTimeout(() => setIsAnimating(false), 500);
-    },
-    [isAnimating, maxIndex]
+    (index: number) => setCurrent(Math.min(Math.max(index, 0), maxIndex)),
+    [maxIndex]
   );
 
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
@@ -75,10 +70,7 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
   useEffect(() => {
     if (total <= visibleCount) return;
     autoplayRef.current = setInterval(() => {
-      setCurrent((c) => {
-        const n = c + 1;
-        return n > maxIndex ? 0 : n;
-      });
+      setCurrent((c) => (c + 1 > maxIndex ? 0 : c + 1));
     }, 4000);
     return () => {
       if (autoplayRef.current) clearInterval(autoplayRef.current);
