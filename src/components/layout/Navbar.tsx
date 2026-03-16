@@ -40,7 +40,7 @@ export default function Navbar() {
               height={48}
               className="h-12 w-auto"
             />
-            <div className="hidden sm:block leading-tight">
+            <div className="leading-tight">
               <div className="flex items-center gap-2">
                 <p className="text-white text-xs font-light uppercase tracking-wider">
                   Εφαρμογή Έργων
