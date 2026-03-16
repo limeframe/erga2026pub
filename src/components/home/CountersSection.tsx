@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import type { HomeStats } from "@/lib/types";
 import { getStatusColor } from "@/lib/status";
+import { ROUTES } from "@/lib/config";
 
 interface CountersSectionProps {
   dataStats: HomeStats | null | undefined;
@@ -53,8 +55,9 @@ export default function CountersSection({ dataStats, istatColors = {}, istatPlur
             const displayLabel = istatPluralLabels[istat] ?? label;
             return (
               <div key={key}>
-                <div
-                  className="bg-white rounded-2xl flex flex-col items-center py-6 px-4 text-center"
+                <Link
+                  href={`${ROUTES.erga}?istat=${istat}`}
+                  className="bg-white rounded-2xl flex flex-col items-center py-6 px-4 text-center block transition-transform hover:-translate-y-1 hover:shadow-xl"
                   style={{ boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}
                 >
                   <i className={`bi ${icon} text-4xl`} style={{ color }} />
@@ -65,7 +68,7 @@ export default function CountersSection({ dataStats, istatColors = {}, istatPlur
                     0
                   </h2>
                   <p className="text-gray-900 text-base">{displayLabel}</p>
-                </div>
+                </Link>
               </div>
             );
           })}
