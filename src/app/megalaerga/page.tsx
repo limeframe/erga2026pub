@@ -2,7 +2,7 @@ import {
   serverGetProjects as getProjects,
   serverGetIStats as getIStats,
   serverGetRUnits as getRUnits,
-  serverGetTypos as getTypos,
+  serverGetPillars as getPillars,
 } from "@/lib/server-api";
 import { ROUTES } from "@/lib/config";
 import PageHeader from "@/components/ui/PageHeader";
@@ -18,7 +18,7 @@ interface SearchParams {
   page?: string;
   istat?: string;
   runit?: string;
-  typos?: string;
+  pillar?: string;
 }
 
 export default async function MegalaErgaPage({
@@ -29,22 +29,17 @@ export default async function MegalaErgaPage({
   const sp = await searchParams;
   const page = parseInt(sp.page ?? "1", 10);
 
-  const [projectsData, istatsRes, runitsRes, typosRes] = await Promise.all([
-    getProjects(1, page).catch(() => null),
+  const filters = { istat: sp.istat, runit: sp.runit, pillar: sp.pillar };
+
+  const [projectsData, istatsRes, runitsRes, pillarsRes] = await Promise.all([
+    getProjects(1, page, filters).catch(() => null),
     getIStats().catch(() => ({ data: [] })),
     getRUnits().catch(() => ({ data: [] })),
-    getTypos().catch(() => ({ data: [] })),
+    getPillars().catch(() => ({ data: [] })),
   ]);
 
   const paginated = projectsData?.infrastructures;
-  const projects = paginated?.data ?? [];
-
-  const filtered = projects.filter((p) => {
-    if (sp.istat && String(p.istat_id) !== sp.istat) return false;
-    if (sp.runit && !p.runits.some((r) => String(r.id) === sp.runit)) return false;
-    if (sp.typos && String(p.typo_id) !== sp.typos) return false;
-    return true;
-  });
+  const filtered = paginated?.data ?? [];
 
   return (
     <>
@@ -60,7 +55,7 @@ export default async function MegalaErgaPage({
           <ProjectsFilter
             istats={istatsRes.data}
             runits={runitsRes.data}
-            typos={typosRes.data}
+            pillars={pillarsRes.data}
           />
         </Suspense>
 
