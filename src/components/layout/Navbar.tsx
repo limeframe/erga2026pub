@@ -88,7 +88,8 @@ export default function Navbar() {
                     </svg>
                   </button>
                   {/* Dropdown */}
-                  <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-md shadow-lg ring-1 ring-black/5 hidden group-hover:block">
+                  <div className="absolute top-full left-0 pt-1 w-44 hidden group-hover:block">
+                    <div className="bg-white rounded-md shadow-lg ring-1 ring-black/5">
                     {item.children.map((child) => (
                       <Link
                         key={child.href}
@@ -98,6 +99,7 @@ export default function Navbar() {
                         {child.label}
                       </Link>
                     ))}
+                    </div>
                   </div>
                 </div>
               ) : (
