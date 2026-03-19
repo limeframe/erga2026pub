@@ -36,54 +36,57 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
 
   const [current, setCurrent] = useState(0);
   const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
   const visibleCount = useVisibleCount();
 
   const total = data.length;
   const gap = visibleCount === 1 ? 0 : visibleCount === 2 ? 24 : 32;
   const maxIndex = Math.max(0, total - visibleCount);
 
-  // ResizeObserver — φωτογραφίζει αμέσως το πραγματικό πλάτος
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      setContainerWidth(entries[0].contentRect.width);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
+  // Κύλιση του track σε συγκεκριμένο index
+  const scrollToIndex = useCallback((index: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const card = track.children[index] as HTMLElement | undefined;
+    if (!card) return;
+    track.scrollTo({ left: card.offsetLeft, behavior: "smooth" });
   }, []);
 
+  const goTo = useCallback((index: number) => {
+    const clamped = Math.min(Math.max(index, 0), maxIndex);
+    setCurrent(clamped);
+    scrollToIndex(clamped);
+  }, [maxIndex, scrollToIndex]);
+
+  const prev = () => goTo(current - 1);
+  const next = () => goTo(current + 1);
+
+  // Reset position όταν αλλάζει visibleCount
   useEffect(() => {
-    setCurrent((c) => Math.min(c, Math.max(0, total - visibleCount)));
-  }, [visibleCount, total]);
+    setCurrent((c) => {
+      const clamped = Math.min(c, Math.max(0, total - visibleCount));
+      scrollToIndex(clamped);
+      return clamped;
+    });
+  }, [visibleCount, total, scrollToIndex]);
 
-  const goTo = useCallback(
-    (index: number) => setCurrent(Math.min(Math.max(index, 0), maxIndex)),
-    [maxIndex]
-  );
-
-  const prev = useCallback(() => goTo(current - 1), [current, goTo]);
-  const next = useCallback(() => goTo(current + 1), [current, goTo]);
-
+  // Autoplay
   useEffect(() => {
     if (total <= visibleCount) return;
     autoplayRef.current = setInterval(() => {
-      setCurrent((c) => (c + 1 > maxIndex ? 0 : c + 1));
+      setCurrent((c) => {
+        const next = c + 1 > maxIndex ? 0 : c + 1;
+        scrollToIndex(next);
+        return next;
+      });
     }, 4000);
-    return () => {
-      if (autoplayRef.current) clearInterval(autoplayRef.current);
-    };
-  }, [total, maxIndex, visibleCount]);
+    return () => { if (autoplayRef.current) clearInterval(autoplayRef.current); };
+  }, [total, maxIndex, visibleCount, scrollToIndex]);
 
   if (!data.length) return null;
 
   const dotCount = maxIndex + 1;
   const cardWidth = `calc((100% - ${(visibleCount - 1) * gap}px) / ${visibleCount})`;
-  // Pixel-accurate offset: κάθε βήμα = (containerWidth + gap) / visibleCount
-  const stepPx = containerWidth > 0 ? (containerWidth + gap) / visibleCount : 0;
-  const translateX = `translateX(-${current * stepPx}px)`;
 
   return (
     <section className="bg-primary-dark py-16 sm:py-24 overflow-hidden">
@@ -111,13 +114,17 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
           </p>
         </div>
 
-        {/* Slider track */}
+        {/* Slider track — overflow-x:hidden + scrollTo για αξιόπιστη κύλιση */}
         <div className="relative">
-          <div className="overflow-hidden" ref={containerRef}>
-            <div
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{ gap: `${gap}px`, transform: translateX }}
-            >
+          <div
+            ref={trackRef}
+            className="flex"
+            style={{
+              gap: `${gap}px`,
+              overflowX: "hidden",
+              scrollBehavior: "smooth",
+            }}
+          >
               {data.map((item) => {
                 const href = ROUTES.ergaSingle(item.id);
                 const color = resolveColor(item.istat_id);
@@ -190,7 +197,6 @@ export default function HomeCarousel({ data, istatColors = {}, istatLabels = {} 
                   </article>
                 );
               })}
-            </div>
           </div>
 
           {/* Arrows */}
